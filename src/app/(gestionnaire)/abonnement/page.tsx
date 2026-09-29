@@ -47,7 +47,7 @@ export default async function SubscriptionPage() {
             </dd>
           </div>
         </dl>
-        <a href={PAY_KADEV_URL} className="btn mt-6" rel="noreferrer">
+        <a href={PAY_KADEV_URL} className="btn mt-6" target="_blank" rel="noreferrer noopener">
           Continuer vers pay.kadev.ci
         </a>
         <p className="mt-3 text-sm text-slate-600">

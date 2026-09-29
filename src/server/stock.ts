@@ -90,6 +90,17 @@ export async function savePart(
   return existing;
 }
 
+export async function setPartAttachment(actor: TenantActor, id: string, attachmentUrl: string) {
+  const companyId = companyIdOf(actor);
+  const existing = await getPrisma().sparePart.findFirst({ where: tenantWhere(companyId, { id }) });
+  if (!existing) throw new ResourceNotFoundError();
+  guardTenantMutation(actor, existing);
+  await getPrisma().sparePart.updateMany({
+    where: tenantWhere(companyId, { id }),
+    data: { attachmentUrl },
+  });
+}
+
 export async function deletePart(actor: TenantActor, id: string) {
   const companyId = companyIdOf(actor);
   const existing = await getPrisma().sparePart.findFirst({ where: tenantWhere(companyId, { id }) });

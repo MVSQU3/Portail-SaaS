@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { deletePartAction, savePartAction } from "@/actions/operations";
+import { deletePartAction, savePartAction, uploadPartFileAction } from "@/actions/operations";
 import { Flash } from "@/components/flash";
 import { ResourceNotFoundError } from "@/lib/errors";
 import { requireValidatedGestionnaire } from "@/lib/guards";
@@ -78,6 +78,28 @@ export default async function PartPage({
           Un écart de quantité crée un mouvement d’entrée ou de sortie. Si le stock passe sous le seuil,
           une notification apparaît sur le dashboard.
         </p>
+      </section>
+      <section className="card p-4 sm:p-6">
+        <h2 className="text-sm font-semibold">Pièce jointe</h2>
+        {part.attachmentUrl ? (
+          <p className="mt-2 text-sm">
+            <a href={part.attachmentUrl} className="font-medium text-teal-800 hover:underline" target="_blank" rel="noreferrer noopener">
+              Voir le fichier
+            </a>
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-slate-600">Aucun fichier pour cette pièce.</p>
+        )}
+        <form action={uploadPartFileAction} className="mt-4 flex flex-wrap items-end gap-3">
+          <input type="hidden" name="id" value={part.id} />
+          <label className="field">
+            <span>PDF ou image, 5 Mo maximum</span>
+            <input name="file" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required />
+          </label>
+          <button type="submit" className="btn">
+            Envoyer
+          </button>
+        </form>
       </section>
     </>
   );

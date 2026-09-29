@@ -3,6 +3,7 @@
 import { Prisma } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { uploadBlob } from "@/lib/blob";
 import { ResourceNotFoundError } from "@/lib/errors";
 import { requireValidatedGestionnaire } from "@/lib/guards";
 import { parseIsoDate } from "@/lib/notices";
@@ -10,7 +11,7 @@ import { deadlineSchema, emptyToNull, maintenanceSchema, optionalInt, partSchema
 import { deleteDeadline, saveDeadline } from "@/server/deadlines";
 import { deleteMaintenance, saveMaintenance } from "@/server/maintenance";
 import { markNoticeRead } from "@/server/notices";
-import { deletePart, savePart } from "@/server/stock";
+import { deletePart, savePart, setPartAttachment } from "@/server/stock";
 
 function invalidOptionalInt(value: string | undefined): boolean {
   const trimmed = value?.trim() ?? "";
@@ -104,6 +105,37 @@ export async function savePartAction(formData: FormData) {
   revalidatePath("/stocks");
   revalidatePath("/tableau-de-bord");
   redirect("/stocks?ok=stock");
+}
+
+const MAX_PART_FILE_BYTES = 5 * 1024 * 1024;
+const PART_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
+
+export async function uploadPartFileAction(formData: FormData) {
+  const { actor } = await requireValidatedGestionnaire();
+  const id = String(formData.get("id") ?? "");
+  const file = formData.get("file");
+  const back = id ? `/stocks/${id}` : "/stocks";
+  if (!actor.companyId || !id || !(file instanceof File) || file.size === 0 || file.size > MAX_PART_FILE_BYTES) {
+    redirect(`${back}?erreur=fichier`);
+  }
+  if (!PART_FILE_TYPES.has(file.type)) {
+    redirect(`${back}?erreur=fichier`);
+  }
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "piece-jointe";
+  try {
+    const uploaded = await uploadBlob(
+      `entreprises/${actor.companyId}/pieces/${id}/${safeName}`,
+      Buffer.from(await file.arrayBuffer()),
+      file.type || "application/octet-stream",
+    );
+    await setPartAttachment(actor, id, uploaded.url);
+  } catch (error) {
+    if (error instanceof ResourceNotFoundError) notFound();
+    redirect(`${back}?erreur=fichier`);
+  }
+  revalidatePath(`/stocks/${id}`);
+  revalidatePath("/stocks");
+  redirect(`${back}?ok=fichier`);
 }
 
 export async function deletePartAction(formData: FormData) {

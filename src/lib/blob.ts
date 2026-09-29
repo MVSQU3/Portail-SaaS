@@ -1,6 +1,6 @@
 /**
- * Helper Vercel Blob pour les pièces jointes (phase ultérieure).
- * Aucun écran d'upload n'appelle cette fonction en phase 1.
+ * Helper Vercel Blob pour la pièce jointe d'une pièce de rechange.
+ * L'écran Stocks appelle cette fonction. Sans jeton, l'envoi est refusé.
  */
 export async function uploadBlob(
   pathname: string,

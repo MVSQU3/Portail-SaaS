@@ -177,11 +177,12 @@ model SparePart {
   company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   sku         String
   name        String
-  quantity    Int      @default(0)
-  minQuantity Int      @default(0)
-  unitCostXof Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  quantity      Int      @default(0)
+  minQuantity   Int      @default(0)
+  unitCostXof   Int      @default(0)
+  attachmentUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   movements StockMovement[]
   notices   Notice[]

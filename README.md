@@ -36,7 +36,7 @@ Copier `.env.example` vers `.env`.
 | `DATABASE_URL` | URL Postgres (Neon ou locale), utilisée par Prisma au runtime et pour les migrations. |
 | `AUTH_SECRET` | Secret Auth.js. `openssl rand -base64 32`. Obligatoire pour se connecter. |
 | `AUTH_URL` | URL publique de l’app, par exemple `http://localhost:3000`. |
-| `BLOB_READ_WRITE_TOKEN` | Jeton Vercel Blob. Le helper `uploadBlob` (`src/lib/blob.ts`) l’utilise. Aucun écran d’upload en phase 1. |
+| `BLOB_READ_WRITE_TOKEN` | Jeton Vercel Blob. Le helper `uploadBlob` (`src/lib/blob.ts`) l’utilise pour la pièce jointe d’une pièce de rechange. |
 | `EMAIL_FROM` | Expéditeur journalisé par le stub e-mail. |
 | `EMAIL_STUB` | Documente le mode simulé. La phase 1 journalise toujours l’e-mail (`EmailLog` + log serveur) et n’appelle aucun fournisseur. |
 
@@ -78,7 +78,7 @@ Pour déclencher une alerte sur l’entreprise validée : ouvrir le Hilux `AA-45
 
 1. Créer un projet Neon et copier l’URL Postgres dans `DATABASE_URL` (l’URL pooler convient au runtime serverless).
 2. Sur Vercel, créer un magasin Blob et copier le jeton dans `BLOB_READ_WRITE_TOKEN`.
-3. Les uploads ne sont pas exposés dans l’interface de cette version.
+3. La fiche d’une pièce de rechange envoie un PDF ou une image via `uploadBlob` lorsque ce jeton est défini.
 
 ## Déploiement Vercel
 
