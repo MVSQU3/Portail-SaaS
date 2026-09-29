@@ -61,6 +61,32 @@ export function evaluateMeterReading(input: {
     }));
 }
 
+export type InitialCrossing = FiredRule & { value: number };
+
+/** Compteurs initiaux d’un véhicule neuf : previous null, comme un premier relevé. */
+export function evaluateInitialMeters(input: {
+  companyId: string;
+  vehicleId: string;
+  currentKm: number;
+  currentHours: number;
+  rules: ThresholdRule[];
+}): InitialCrossing[] {
+  const readings: Array<{ metric: MeterMetric; value: number }> = [];
+  if (input.currentKm > 0) readings.push({ metric: "KILOMETRES", value: input.currentKm });
+  if (input.currentHours > 0) readings.push({ metric: "HEURES", value: input.currentHours });
+
+  return readings.flatMap((reading) =>
+    evaluateMeterReading({
+      companyId: input.companyId,
+      vehicleId: input.vehicleId,
+      metric: reading.metric,
+      previous: null,
+      next: reading.value,
+      rules: input.rules,
+    }).map((fired) => ({ ...fired, value: reading.value })),
+  );
+}
+
 export function buildAlertCopy(input: {
   ruleName: string;
   vehicleLabel: string;

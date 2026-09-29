@@ -1,14 +1,13 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import type { TenantRole } from "@/lib/tenant";
+import { authConfig } from "@/auth.config";
 import { getPrisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/passwords";
+import type { TenantRole } from "@/lib/tenant";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: true,
+  ...authConfig,
   secret: process.env.AUTH_SECRET,
-  session: { strategy: "jwt" },
-  pages: { signIn: "/connexion" },
   providers: [
     Credentials({
       name: "Identifiants",
@@ -38,19 +37,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-        token.companyId = user.companyId;
-      }
-      return token;
-    },
-    session({ session, token }) {
-      session.user.id = token.sub ?? "";
-      session.user.role = token.role ?? "GESTIONNAIRE";
-      session.user.companyId = token.companyId ?? null;
-      return session;
-    },
-  },
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildAlertCopy,
   didCrossThreshold,
+  evaluateInitialMeters,
   evaluateMeterReading,
   isMeterProgression,
   type ThresholdRule,
@@ -66,6 +67,40 @@ describe("evaluateMeterReading", () => {
       previous: 44000,
       next: 45200,
       rules: [rule()],
+    });
+    expect(fired).toEqual([]);
+  });
+});
+
+describe("evaluateInitialMeters", () => {
+  it("crée les mêmes franchissements qu’un premier relevé si le compteur initial dépasse le seuil", () => {
+    const fired = evaluateInitialMeters({
+      companyId: "company-a",
+      vehicleId: "vehicle-new",
+      currentKm: 50000,
+      currentHours: 2600,
+      rules: [
+        rule({ id: "km-fleet", vehicleId: null, threshold: 48000, name: "Vidange parc" }),
+        rule({ id: "hours-fleet", vehicleId: null, metric: "HEURES", threshold: 2500, name: "Révision horaire" }),
+        rule({ id: "other-company", companyId: "company-b", vehicleId: null, threshold: 1 }),
+        rule({ id: "below", vehicleId: null, threshold: 80000 }),
+      ],
+    });
+
+    expect(fired.map((item) => item.ruleId)).toEqual(["km-fleet", "hours-fleet"]);
+    expect(fired.find((item) => item.ruleId === "km-fleet")?.value).toBe(50000);
+  });
+
+  it("ne déclenche pas un compteur initial nul ou encore sous le seuil", () => {
+    const fired = evaluateInitialMeters({
+      companyId: "company-a",
+      vehicleId: "vehicle-new",
+      currentKm: 0,
+      currentHours: 100,
+      rules: [
+        rule({ vehicleId: null, threshold: 1000 }),
+        rule({ id: "hours", vehicleId: null, metric: "HEURES", threshold: 2500 }),
+      ],
     });
     expect(fired).toEqual([]);
   });

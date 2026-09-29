@@ -1,6 +1,8 @@
+import { evaluateInitialMeters } from "@/lib/alerts";
 import { getPrisma } from "@/lib/prisma";
 import { assertTenantAccess, tenantWhere, type TenantActor } from "@/lib/tenant";
 import { VehicleNotFoundError } from "@/lib/errors";
+import { sendThresholdEmails, writeThresholdAlerts } from "@/server/readings";
 
 export async function listVehicles(actor: TenantActor) {
   if (!actor.companyId) {
@@ -50,40 +52,70 @@ export async function createVehicle(
   assertTenantAccess(actor, actor.companyId);
   const companyId = actor.companyId;
   const prisma = getPrisma();
-  return prisma.vehicle.create({
-    data: {
+  const prepared = await prisma.$transaction(async (tx) => {
+    const vehicle = await tx.vehicle.create({
+      data: {
+        companyId,
+        label: input.label,
+        registration: input.registration.toUpperCase(),
+        brand: input.brand,
+        model: input.model,
+        year: input.year,
+        currentKm: input.currentKm,
+        currentHours: input.currentHours,
+        meterReadings: {
+          create: [
+            ...(input.currentKm > 0
+              ? [
+                  {
+                    companyId,
+                    metric: "KILOMETRES" as const,
+                    value: input.currentKm,
+                    note: "Relevé initial",
+                  },
+                ]
+              : []),
+            ...(input.currentHours > 0
+              ? [
+                  {
+                    companyId,
+                    metric: "HEURES" as const,
+                    value: input.currentHours,
+                    note: "Relevé initial",
+                  },
+                ]
+              : []),
+          ],
+        },
+      },
+      include: { meterReadings: true },
+    });
+
+    const rules = await tx.alertRule.findMany({
+      where: tenantWhere(companyId, { active: true }),
+    });
+    const crossings = evaluateInitialMeters({
       companyId,
-      label: input.label,
-      registration: input.registration.toUpperCase(),
-      brand: input.brand,
-      model: input.model,
-      year: input.year,
+      vehicleId: vehicle.id,
       currentKm: input.currentKm,
       currentHours: input.currentHours,
-      meterReadings: {
-        create: [
-          ...(input.currentKm > 0
-            ? [
-                {
-                  companyId,
-                  metric: "KILOMETRES" as const,
-                  value: input.currentKm,
-                  note: "Relevé initial",
-                },
-              ]
-            : []),
-          ...(input.currentHours > 0
-            ? [
-                {
-                  companyId,
-                  metric: "HEURES" as const,
-                  value: input.currentHours,
-                  note: "Relevé initial",
-                },
-              ]
-            : []),
-        ],
-      },
-    },
+      rules,
+    });
+    const alerts = await writeThresholdAlerts(tx, {
+      companyId,
+      vehicleId: vehicle.id,
+      vehicleLabel: vehicle.label,
+      registration: vehicle.registration,
+      items: crossings.flatMap((crossing) => {
+        const reading = vehicle.meterReadings.find((item) => item.metric === crossing.metric);
+        if (!reading) return [];
+        return [{ fired: crossing, readingId: reading.id, value: crossing.value }];
+      }),
+    });
+
+    return { vehicle, alerts };
   });
+
+  await sendThresholdEmails(companyId, prepared.alerts.copies, prepared.alerts.recipients);
+  return prepared.vehicle;
 }

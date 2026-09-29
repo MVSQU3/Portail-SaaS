@@ -64,15 +64,9 @@ Commandes utiles :
 
 ## Comptes de démonstration
 
-Mots de passe réservés au développement local. Ne pas réutiliser ces valeurs en production. Relancer `npm run db:seed` réapplique le statut des entreprises de démo ; le mot de passe n’est posé qu’à la création du compte.
+`npm run db:seed` crée les comptes locaux (admin plateforme, entreprise validée, entreprise en attente). Les identifiants sont uniquement dans `prisma/seed.ts`. Ils servent à une base de développement, pas à la production. Relancer le seed réapplique le statut des entreprises de démo ; le mot de passe n’est posé qu’à la création du compte. La configuration d’environnement reste celle de `.env.example`.
 
-| Rôle | E-mail | Mot de passe | Ce que l’on voit |
-| --- | --- | --- | --- |
-| Admin plateforme | `admin@fleetcare.dev` | `AdminFleetCare2026` | Entreprises et abonnements |
-| Gestionnaire, entreprise validée Transports Lagunes | `gestionnaire@fleetcare.dev` | `GestionnaireFleetCare2026` | Dashboard, véhicules, alertes |
-| Gestionnaire, Société Pendante SARL | `en-attente@fleetcare.dev` | `AttenteFleetCare2026` | Écran d’attente, sans menu |
-
-Pour déclencher une alerte sur le compte validé : ouvrir le Hilux `AA-452-CI` (compteur 45 200 km, seuil « Vidange Hilux » à 48 000 km) et enregistrer un relevé kilomètres ≥ 48 000. Le fourgon `BB-118-CI` a un seuil à 2 500 heures (compteur actuel 2 100). L’alerte apparaît sur le dashboard et une ligne est écrite dans `EmailLog`.
+Pour déclencher une alerte sur l’entreprise validée : ouvrir le Hilux `AA-452-CI` (compteur 45 200 km, seuil « Vidange Hilux » à 48 000 km) et enregistrer un relevé kilomètres ≥ 48 000. Le fourgon `BB-118-CI` a un seuil à 2 500 heures (compteur actuel 2 100). L’alerte apparaît sur le dashboard et une ligne est écrite dans `EmailLog`.
 
 ## Neon et Vercel Blob
 

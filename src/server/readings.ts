@@ -1,4 +1,11 @@
-import { buildAlertCopy, evaluateMeterReading, isMeterProgression, type MeterMetric } from "@/lib/alerts";
+import {
+  buildAlertCopy,
+  evaluateMeterReading,
+  isMeterProgression,
+  type FiredRule,
+  type MeterMetric,
+} from "@/lib/alerts";
+import type { Prisma } from "@prisma/client";
 import { deliverTransactionalEmail } from "@/lib/email";
 import { MeterRegressionError, VehicleNotFoundError } from "@/lib/errors";
 import { getPrisma } from "@/lib/prisma";
@@ -9,6 +16,68 @@ import {
   tenantWhere,
   type TenantActor,
 } from "@/lib/tenant";
+
+type AlertCopy = ReturnType<typeof buildAlertCopy>;
+
+export async function writeThresholdAlerts(
+  tx: Prisma.TransactionClient,
+  input: {
+    companyId: string;
+    vehicleId: string;
+    vehicleLabel: string;
+    registration: string;
+    items: Array<{ fired: FiredRule; readingId: string; value: number }>;
+  },
+): Promise<{ copies: AlertCopy[]; recipients: string[] }> {
+  const copies: AlertCopy[] = [];
+  for (const item of input.items) {
+    const copy = buildAlertCopy({
+      ruleName: item.fired.name,
+      vehicleLabel: input.vehicleLabel,
+      registration: input.registration,
+      metric: item.fired.metric,
+      value: item.value,
+      threshold: item.fired.threshold,
+    });
+    await tx.alert.create({
+      data: {
+        companyId: input.companyId,
+        vehicleId: input.vehicleId,
+        ruleId: item.fired.ruleId,
+        readingId: item.readingId,
+        title: copy.title,
+        message: copy.message,
+        status: "OUVERTE",
+      },
+    });
+    copies.push(copy);
+  }
+
+  const users = await tx.user.findMany({
+    where: { companyId: input.companyId },
+    select: { companyId: true, email: true, role: true },
+  });
+
+  return { copies, recipients: emailsForCompany(input.companyId, users) };
+}
+
+export async function sendThresholdEmails(
+  companyId: string,
+  copies: AlertCopy[],
+  recipients: string[],
+): Promise<void> {
+  for (const copy of copies) {
+    for (const to of recipients) {
+      await deliverTransactionalEmail({
+        to,
+        subject: copy.emailSubject,
+        body: copy.emailBody,
+        kind: "ALERTE_SEUIL",
+        companyId,
+      });
+    }
+  }
+}
 
 export async function recordMeterReading(input: {
   actor: TenantActor;
@@ -65,49 +134,16 @@ export async function recordMeterReading(input: {
       data: input.metric === "KILOMETRES" ? { currentKm: input.value } : { currentHours: input.value },
     });
 
-    const copies = [];
-    for (const rule of fired) {
-      const copy = buildAlertCopy({
-        ruleName: rule.name,
-        vehicleLabel: vehicle.label,
-        registration: vehicle.registration,
-        metric: rule.metric,
-        value: input.value,
-        threshold: rule.threshold,
-      });
-      await tx.alert.create({
-        data: {
-          companyId,
-          vehicleId: vehicle.id,
-          ruleId: rule.ruleId,
-          readingId: reading.id,
-          title: copy.title,
-          message: copy.message,
-          status: "OUVERTE",
-        },
-      });
-      copies.push(copy);
-    }
-
-    const users = await tx.user.findMany({
-      where: { companyId },
-      select: { companyId: true, email: true, role: true },
+    return writeThresholdAlerts(tx, {
+      companyId,
+      vehicleId: vehicle.id,
+      vehicleLabel: vehicle.label,
+      registration: vehicle.registration,
+      items: fired.map((rule) => ({ fired: rule, readingId: reading.id, value: input.value })),
     });
-
-    return { copies, recipients: emailsForCompany(companyId, users) };
   });
 
-  for (const copy of prepared.copies) {
-    for (const to of prepared.recipients) {
-      await deliverTransactionalEmail({
-        to,
-        subject: copy.emailSubject,
-        body: copy.emailBody,
-        kind: "ALERTE_SEUIL",
-        companyId,
-      });
-    }
-  }
+  await sendThresholdEmails(companyId, prepared.copies, prepared.recipients);
 
   return { alertCount: prepared.copies.length };
 }
