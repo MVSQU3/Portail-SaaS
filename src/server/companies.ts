@@ -1,7 +1,7 @@
-import type { CompanyStatus } from "@prisma/client";
+import type { CompanyStatus, SubscriptionStatus } from "@prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/passwords";
-import { assertPlatformAdmin, type TenantActor } from "@/lib/tenant";
+import { assertPlatformAdmin, assertTenantAccess, type TenantActor } from "@/lib/tenant";
 
 export async function registerCompany(input: {
   companyName: string;
@@ -40,6 +40,40 @@ export async function listCompaniesForAdmin(actor: TenantActor) {
     include: {
       subscription: true,
       _count: { select: { users: true, vehicles: true } },
+    },
+  });
+}
+
+export async function getCompanySubscription(actor: TenantActor) {
+  if (!actor.companyId) {
+    throw new Error("Entreprise absente.");
+  }
+  assertTenantAccess(actor, actor.companyId);
+  return getPrisma().subscription.findFirst({ where: { companyId: actor.companyId } });
+}
+
+export async function updateCompanySubscription(
+  actor: TenantActor,
+  input: {
+    companyId: string;
+    status: SubscriptionStatus;
+    planName: string | null;
+    amountXof: number | null;
+  },
+) {
+  assertPlatformAdmin(actor);
+  await getPrisma().subscription.upsert({
+    where: { companyId: input.companyId },
+    create: {
+      companyId: input.companyId,
+      status: input.status,
+      planName: input.planName,
+      amountXof: input.amountXof,
+    },
+    update: {
+      status: input.status,
+      planName: input.planName,
+      amountXof: input.amountXof,
     },
   });
 }

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { markAlertReadAction } from "@/actions/fleet";
+import { markNoticeReadAction } from "@/actions/operations";
 import { Flash } from "@/components/flash";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDateTime } from "@/lib/format";
 import { requireValidatedGestionnaire } from "@/lib/guards";
 import { ALERT_STATUS_LABEL } from "@/lib/labels";
 import { getDashboard } from "@/server/dashboard";
+import { syncOperationalNotices } from "@/server/notices";
 
 export const metadata = { title: "Dashboard" };
 
@@ -16,6 +18,7 @@ export default async function DashboardPage({
 }) {
   const { actor, company } = await requireValidatedGestionnaire();
   const query = await searchParams;
+  await syncOperationalNotices(actor);
   const data = await getDashboard(actor);
   const open = data.alerts.filter((alert) => alert.status === "OUVERTE");
 
@@ -86,6 +89,40 @@ export default async function DashboardPage({
             Aucune alerte ouverte pour le moment.
           </p>
         ) : null}
+      </section>
+      <section className="card">
+        <div className="border-b border-slate-200 px-4 py-3">
+          <h2 className="text-sm font-semibold">Stocks et échéances</h2>
+        </div>
+        {data.notices.length === 0 ? (
+          <p className="px-4 py-6 text-sm leading-6 text-slate-600">
+            Aucune notification de stock bas ou d’échéance. Elles apparaissent lorsque une pièce passe
+            sous son seuil, ou lorsqu’une assurance ou une visite technique arrive dans les 30 jours.
+          </p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {data.notices.map((notice) => (
+              <li key={notice.id} className="grid gap-3 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{notice.title}</p>
+                    <StatusBadge code={notice.status} label={ALERT_STATUS_LABEL[notice.status]} />
+                  </div>
+                  <p className="mt-1 text-sm text-slate-600">{notice.message}</p>
+                  <p className="mt-1 text-xs text-slate-500">{formatDateTime(notice.createdAt)}</p>
+                </div>
+                {notice.status === "OUVERTE" ? (
+                  <form action={markNoticeReadAction}>
+                    <input type="hidden" name="noticeId" value={notice.id} />
+                    <button type="submit" className="btn-secondary">
+                      Marquer comme lue
+                    </button>
+                  </form>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </>
   );

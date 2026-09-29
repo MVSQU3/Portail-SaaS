@@ -86,6 +86,7 @@ model Company {
   deadlines       Deadline[]
   alertRules      AlertRule[]
   alerts          Alert[]
+  notices         Notice[]
   emailLogs       EmailLog[]
   subscription    Subscription?
 }
@@ -183,6 +184,7 @@ model SparePart {
   updatedAt   DateTime @updatedAt
 
   movements StockMovement[]
+  notices   Notice[]
 
   @@unique([companyId, sku])
   @@index([companyId])
@@ -218,8 +220,36 @@ model Deadline {
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
+  notices Notice[]
+
   @@index([companyId])
   @@index([vehicleId])
+}
+
+enum NoticeKind {
+  STOCK_BAS
+  ECHEANCE
+}
+
+model Notice {
+  id          String      @id @default(cuid())
+  companyId   String
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  kind        NoticeKind
+  severity    String
+  dedupeKey   String
+  title       String
+  message     String
+  status      AlertStatus @default(OUVERTE)
+  sparePartId String?
+  sparePart   SparePart?  @relation(fields: [sparePartId], references: [id], onDelete: Cascade)
+  deadlineId  String?
+  deadline    Deadline?   @relation(fields: [deadlineId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  readAt      DateTime?
+
+  @@unique([companyId, dedupeKey])
+  @@index([companyId, status])
 }
 
 model AlertRule {
