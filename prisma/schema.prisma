@@ -1,0 +1,287 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum CompanyStatus {
+  EN_ATTENTE
+  VALIDEE
+  SUSPENDUE
+}
+
+enum UserRole {
+  GESTIONNAIRE
+  ADMIN_PLATEFORME
+}
+
+enum VehicleStatus {
+  ACTIF
+  HORS_SERVICE
+  ARCHIVE
+}
+
+enum MeterMetric {
+  KILOMETRES
+  HEURES
+}
+
+enum MaintenanceKind {
+  PREVENTIVE
+  CORRECTIVE
+  REVISION
+}
+
+enum DeadlineKind {
+  ASSURANCE
+  VISITE_TECHNIQUE
+}
+
+enum DeadlineStatus {
+  A_VENIR
+  PROCHE
+  DEPASSEE
+  TRAITEE
+}
+
+enum AlertStatus {
+  OUVERTE
+  LUE
+  RESOLUE
+}
+
+enum SubscriptionStatus {
+  AUCUN
+  ESSAI
+  ACTIF
+  EXPIRE
+  SUSPENDU
+}
+
+enum StockMovementKind {
+  ENTREE
+  SORTIE
+  AJUSTEMENT
+}
+
+model Company {
+  id        String        @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  city      String?
+  status    CompanyStatus @default(EN_ATTENTE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  users           User[]
+  vehicles        Vehicle[]
+  meterReadings   MeterReading[]
+  maintenanceLogs MaintenanceLog[]
+  spareParts      SparePart[]
+  stockMovements  StockMovement[]
+  deadlines       Deadline[]
+  alertRules      AlertRule[]
+  alerts          Alert[]
+  emailLogs       EmailLog[]
+  subscription    Subscription?
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         UserRole
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  meterReadings MeterReading[]
+
+  @@index([companyId])
+}
+
+model Vehicle {
+  id           String        @id @default(cuid())
+  companyId    String
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  label        String
+  registration String
+  brand        String?
+  model        String?
+  year         Int?
+  status       VehicleStatus @default(ACTIF)
+  currentKm    Int           @default(0)
+  currentHours Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  meterReadings   MeterReading[]
+  maintenanceLogs MaintenanceLog[]
+  deadlines       Deadline[]
+  alertRules      AlertRule[]
+  alerts          Alert[]
+
+  @@unique([companyId, registration])
+  @@index([companyId])
+}
+
+model MeterReading {
+  id           String      @id @default(cuid())
+  companyId    String
+  company      Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicleId    String
+  vehicle      Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  metric       MeterMetric
+  value        Int
+  recordedAt   DateTime    @default(now())
+  recordedById String?
+  recordedBy   User?       @relation(fields: [recordedById], references: [id], onDelete: SetNull)
+  note         String?
+
+  alerts Alert[]
+
+  @@index([companyId])
+  @@index([vehicleId, metric])
+}
+
+model MaintenanceLog {
+  id          String          @id @default(cuid())
+  companyId   String
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicleId   String
+  vehicle     Vehicle         @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  kind        MaintenanceKind
+  title       String
+  description String?
+  performedAt DateTime
+  odometerKm  Int?
+  hours       Int?
+  costXof     Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([companyId])
+  @@index([vehicleId])
+}
+
+model SparePart {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sku         String
+  name        String
+  quantity    Int      @default(0)
+  minQuantity Int      @default(0)
+  unitCostXof Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  movements StockMovement[]
+
+  @@unique([companyId, sku])
+  @@index([companyId])
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  companyId   String
+  company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sparePartId String
+  sparePart   SparePart         @relation(fields: [sparePartId], references: [id], onDelete: Cascade)
+  kind        StockMovementKind
+  quantity    Int
+  note        String?
+  createdAt   DateTime          @default(now())
+
+  @@index([companyId])
+  @@index([sparePartId])
+}
+
+model Deadline {
+  id        String         @id @default(cuid())
+  companyId String
+  company   Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicleId String?
+  vehicle   Vehicle?       @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  kind      DeadlineKind
+  label     String
+  dueOn     DateTime       @db.Date
+  status    DeadlineStatus @default(A_VENIR)
+  costXof   Int?
+  notes     String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([companyId])
+  @@index([vehicleId])
+}
+
+model AlertRule {
+  id        String      @id @default(cuid())
+  companyId String
+  company   Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicleId String?
+  vehicle   Vehicle?    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  metric    MeterMetric
+  threshold Int
+  name      String
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  alerts Alert[]
+
+  @@index([companyId, metric])
+}
+
+model Alert {
+  id        String        @id @default(cuid())
+  companyId String
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vehicleId String
+  vehicle   Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  ruleId    String
+  rule      AlertRule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  readingId String?
+  reading   MeterReading? @relation(fields: [readingId], references: [id], onDelete: SetNull)
+  title     String
+  message   String
+  status    AlertStatus   @default(OUVERTE)
+  createdAt DateTime      @default(now())
+  readAt    DateTime?
+
+  @@index([companyId, status])
+}
+
+model Subscription {
+  id          String             @id @default(cuid())
+  companyId   String             @unique
+  company     Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status      SubscriptionStatus @default(AUCUN)
+  planName    String?
+  amountXof   Int?
+  periodStart DateTime?
+  periodEnd   DateTime?
+  notes       String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  to        String
+  subject   String
+  body      String
+  kind      String
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+}
