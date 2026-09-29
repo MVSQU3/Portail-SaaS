@@ -268,7 +268,7 @@ async function ensureMaintenance(companyId: string, vehicleId: string) {
       vehicleId,
       kind: "PREVENTIVE",
       title: "Vidange précédente",
-      description: "Donnée d’exemple pour la phase suivante. Non exposée dans l’interface.",
+      description: "Vidange de démonstration, visible dans le carnet d’entretien.",
       performedAt: new Date("2026-06-12T09:00:00.000Z"),
       odometerKm: 42000,
       costXof: 75000,
@@ -301,26 +301,71 @@ async function ensurePart(companyId: string) {
       },
     });
   }
+
+  const low = await prisma.sparePart.upsert({
+    where: { companyId_sku: { companyId, sku: "PLQ-AV-01" } },
+    update: {},
+    create: {
+      companyId,
+      sku: "PLQ-AV-01",
+      name: "Plaquettes avant",
+      quantity: 1,
+      minQuantity: 4,
+      unitCostXof: 22000,
+    },
+  });
+  const lowMovement = await prisma.stockMovement.findFirst({ where: { sparePartId: low.id } });
+  if (!lowMovement) {
+    await prisma.stockMovement.create({
+      data: {
+        companyId,
+        sparePartId: low.id,
+        kind: "ENTREE",
+        quantity: 1,
+        note: "Stock sous le seuil, pour la démonstration",
+      },
+    });
+  }
 }
 
 async function ensureDeadline(companyId: string, vehicleId: string) {
   const existing = await prisma.deadline.findFirst({
     where: { companyId, vehicleId, label: "Assurance Hilux" },
   });
-  if (existing) return;
-  const dueOn = new Date();
-  dueOn.setUTCDate(dueOn.getUTCDate() + 40);
-  await prisma.deadline.create({
-    data: {
-      companyId,
-      vehicleId,
-      kind: "ASSURANCE",
-      label: "Assurance Hilux",
-      dueOn,
-      status: "A_VENIR",
-      costXof: 180000,
-    },
+  if (!existing) {
+    const dueOn = new Date();
+    dueOn.setUTCDate(dueOn.getUTCDate() + 40);
+    await prisma.deadline.create({
+      data: {
+        companyId,
+        vehicleId,
+        kind: "ASSURANCE",
+        label: "Assurance Hilux",
+        dueOn,
+        status: "A_VENIR",
+        costXof: 180000,
+      },
+    });
+  }
+
+  const inspection = await prisma.deadline.findFirst({
+    where: { companyId, vehicleId, label: "Visite technique Hilux" },
   });
+  if (!inspection) {
+    const soon = new Date();
+    soon.setUTCDate(soon.getUTCDate() + 12);
+    await prisma.deadline.create({
+      data: {
+        companyId,
+        vehicleId,
+        kind: "VISITE_TECHNIQUE",
+        label: "Visite technique Hilux",
+        dueOn: soon,
+        status: "A_VENIR",
+        costXof: 25000,
+      },
+    });
+  }
 }
 
 main()

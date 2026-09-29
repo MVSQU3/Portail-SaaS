@@ -1,6 +1,6 @@
 # FleetCare
 
-Portail de suivi de flotte pour les entreprises (phase 1). Interface en français, montants en francs CFA entiers (XOF, sans décimales). Les kilomètres et les heures se saisissent à la main : pas de télématique, pas d’application native, pas de paiement automatique.
+Portail de suivi de flotte pour les entreprises. Interface en français, montants en francs CFA entiers (XOF, sans décimales). Les kilomètres et les heures se saisissent à la main : pas de télématique, pas d’application native, pas de capture de paiement.
 
 ## Phase 1
 
@@ -11,10 +11,16 @@ Portail de suivi de flotte pour les entreprises (phase 1). Interface en françai
 - Liste et fiche véhicules, relevés kilomètres / heures.
 - Seuils d’alerte : un relevé qui franchit le seuil crée une notification dans l’application et un e-mail transactionnel simulé (`EmailLog`).
 - Dashboard des alertes de l’entreprise connectée.
-- Pages préparé pour la phase 2 (carnet, stocks, échéances, abonnement) dans le même menu, avec un état vide explicite.
-- Schéma Prisma complet (entreprises, utilisateurs, véhicules, relevés, carnet, pièces, échéances, règles, alertes, abonnements).
+- Schéma Prisma (entreprises, utilisateurs, véhicules, relevés, carnet, pièces, échéances, règles, alertes, abonnements).
 
-Le paiement [pay.kadev.ci](https://pay.kadev.ci) est une constante nommée (`PAY_KADEV_URL` dans `src/lib/integrations.ts`). Aucune capture n’est implémentée.
+## Modules suivants
+
+- Carnet d’entretien : opérations liées aux véhicules de l’entreprise, coût en XOF entier.
+- Stocks : pièces, mouvements, alerte de stock bas (notification dans l’application et e-mail simulé).
+- Échéances : assurance et visite technique. Une date dans les 30 jours, ou déjà dépassée, crée la même notification et le même e-mail simulé.
+- Abonnement : le gestionnaire voit le statut et un lien vers [pay.kadev.ci](https://pay.kadev.ci). Aucune capture. L’admin plateforme met le statut, l’offre et le montant à jour à la main.
+
+Le paiement reste la constante `PAY_KADEV_URL` dans `src/lib/integrations.ts`.
 
 ## Prérequis
 
@@ -30,7 +36,7 @@ Copier `.env.example` vers `.env`.
 | `DATABASE_URL` | URL Postgres (Neon ou locale), utilisée par Prisma au runtime et pour les migrations. |
 | `AUTH_SECRET` | Secret Auth.js. `openssl rand -base64 32`. Obligatoire pour se connecter. |
 | `AUTH_URL` | URL publique de l’app, par exemple `http://localhost:3000`. |
-| `BLOB_READ_WRITE_TOKEN` | Jeton Vercel Blob. Le helper `uploadBlob` (`src/lib/blob.ts`) l’utilise. Aucun écran d’upload en phase 1. |
+| `BLOB_READ_WRITE_TOKEN` | Jeton Vercel Blob. Le helper `uploadBlob` (`src/lib/blob.ts`) l’utilise pour la pièce jointe d’une pièce de rechange. |
 | `EMAIL_FROM` | Expéditeur journalisé par le stub e-mail. |
 | `EMAIL_STUB` | Documente le mode simulé. La phase 1 journalise toujours l’e-mail (`EmailLog` + log serveur) et n’appelle aucun fournisseur. |
 
@@ -72,7 +78,7 @@ Pour déclencher une alerte sur l’entreprise validée : ouvrir le Hilux `AA-45
 
 1. Créer un projet Neon et copier l’URL Postgres dans `DATABASE_URL` (l’URL pooler convient au runtime serverless).
 2. Sur Vercel, créer un magasin Blob et copier le jeton dans `BLOB_READ_WRITE_TOKEN`.
-3. Les uploads ne sont pas exposés dans l’interface de cette version.
+3. La fiche d’une pièce de rechange envoie un PDF ou une image via `uploadBlob` lorsque ce jeton est défini.
 
 ## Déploiement Vercel
 
@@ -81,6 +87,4 @@ Pour déclencher une alerte sur l’entreprise validée : ouvrir le Hilux `AA-45
 3. Appliquer le schéma avant le premier usage : en local, avec l’URL Neon de production, `npx prisma migrate deploy`. Ne pas lancer le seed sur une base réelle de clients.
 4. Le build ne migre pas la base et ne capture pas de paiement.
 
-## Phase 2 (hors de cette version)
-
-Carnet d’entretien, stocks et alertes de seuil bas, échéances (assurance, visite technique) et alertes associées, page abonnement avec passage vers pay.kadev.ci, édition admin plus complète des abonnements. Le schéma et les entrées de menu sont déjà là pour que ces ajouts restent additifs.
+Le menu gestionnaire reste, dans cet ordre : Dashboard, Véhicules, Carnet d’entretien, Stocks, Échéances, Abonnement, Déconnexion. L’admin plateforme n’a que Entreprises, Abonnements et Déconnexion. Les écrans de connexion et d’attente n’affichent pas ce menu.

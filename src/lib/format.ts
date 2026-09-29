@@ -12,6 +12,10 @@ export function formatInteger(value: number): string {
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(Math.trunc(value));
 }
 
+export function formatDay(value: Date): string {
+  return new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeZone: "UTC" }).format(value);
+}
+
 export function formatDateTime(value: Date): string {
   return new Intl.DateTimeFormat("fr-FR", {
     dateStyle: "medium",

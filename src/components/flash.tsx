@@ -6,6 +6,11 @@ const ERRORS: Record<string, string> = {
   vehicule: "Impossible d’ajouter ce véhicule. Vérifiez l’immatriculation et les compteurs.",
   seuil: "Impossible d’enregistrer ce seuil.",
   acces: "Accès refusé.",
+  entretien: "Impossible d’enregistrer cette opération.",
+  stock: "Impossible d’enregistrer cette pièce.",
+  echeance: "Impossible d’enregistrer cette échéance.",
+  abonnement: "Le montant doit être un entier de francs CFA, sans décimales.",
+  fichier: "Impossible d’envoyer le fichier. Utilisez un PDF ou une image de 5 Mo maximum, avec le jeton Blob configuré.",
 };
 
 const SUCCESS: Record<string, string> = {
@@ -15,6 +20,14 @@ const SUCCESS: Record<string, string> = {
   alerte: "Alerte marquée comme lue.",
   validee: "Entreprise validée.",
   suspendue: "Entreprise suspendue.",
+  entretien: "Opération enregistrée.",
+  "entretien-supprime": "Opération supprimée.",
+  stock: "Pièce enregistrée.",
+  "stock-supprime": "Pièce supprimée.",
+  echeance: "Échéance enregistrée.",
+  "echeance-supprime": "Échéance supprimée.",
+  abonnement: "Abonnement mis à jour.",
+  fichier: "Fichier enregistré.",
 };
 
 export function Flash({ erreur, ok }: { erreur?: string; ok?: string }) {

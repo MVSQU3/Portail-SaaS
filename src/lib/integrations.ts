@@ -1,6 +1,6 @@
 /**
  * Point d'intégration paiement pay.kadev.ci.
- * La phase 1 ne capture aucun paiement et n'ouvre pas de session de checkout.
+ * L'application redirige vers cette URL et ne capture aucun paiement.
  */
 export const PAY_KADEV_URL = "https://pay.kadev.ci" as const;
 

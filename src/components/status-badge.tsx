@@ -12,6 +12,10 @@ const TONE: Record<string, string> = {
   SUSPENDU: "bg-red-50 text-red-800 ring-red-200",
   HORS_SERVICE: "bg-slate-100 text-slate-700 ring-slate-200",
   ARCHIVE: "bg-slate-100 text-slate-700 ring-slate-200",
+  A_VENIR: "bg-sky-50 text-sky-900 ring-sky-200",
+  PROCHE: "bg-amber-50 text-amber-900 ring-amber-200",
+  DEPASSEE: "bg-red-50 text-red-800 ring-red-200",
+  TRAITEE: "bg-slate-100 text-slate-700 ring-slate-200",
 };
 
 export function StatusBadge({ code, label }: { code: string; label: string }) {

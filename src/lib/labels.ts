@@ -23,3 +23,21 @@ export const ALERT_STATUS_LABEL = {
   LUE: "Lue",
   RESOLUE: "Résolue",
 } as const;
+
+export const MAINTENANCE_KIND_LABEL = {
+  PREVENTIVE: "Préventif",
+  CORRECTIVE: "Correctif",
+  REVISION: "Révision",
+} as const;
+
+export const DEADLINE_KIND_LABEL = {
+  ASSURANCE: "Assurance",
+  VISITE_TECHNIQUE: "Visite technique",
+} as const;
+
+export const DEADLINE_STATUS_LABEL = {
+  A_VENIR: "À venir",
+  PROCHE: "Proche",
+  DEPASSEE: "Dépassée",
+  TRAITEE: "Traitée",
+} as const;

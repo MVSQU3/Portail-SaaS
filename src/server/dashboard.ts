@@ -9,7 +9,7 @@ export async function getDashboard(actor: TenantActor) {
   const companyId = actor.companyId;
   const prisma = getPrisma();
   const where = tenantWhere(companyId);
-  const [vehicleCount, openAlerts, activeRules, alerts] = await Promise.all([
+  const [vehicleCount, openMeterAlerts, activeRules, alerts, notices] = await Promise.all([
     prisma.vehicle.count({ where }),
     prisma.alert.count({ where: { ...where, status: "OUVERTE" } }),
     prisma.alertRule.count({ where: { ...where, active: true } }),
@@ -21,14 +21,26 @@ export async function getDashboard(actor: TenantActor) {
         vehicle: { select: { label: true, registration: true, companyId: true } },
       },
     }),
+    prisma.notice.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 8,
+    }),
   ]);
+  const openNotices = notices.filter((notice) => notice.status === "OUVERTE").length;
 
   for (const alert of alerts) {
     guardTenantMutation(actor, alert);
     guardTenantMutation(actor, alert.vehicle);
   }
 
-  return { vehicleCount, openAlerts, activeRules, alerts };
+  return {
+    vehicleCount,
+    openAlerts: openMeterAlerts + openNotices,
+    activeRules,
+    alerts,
+    notices,
+  };
 }
 
 export async function markAlertRead(actor: TenantActor, alertId: string) {
