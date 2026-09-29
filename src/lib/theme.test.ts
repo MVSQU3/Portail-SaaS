@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   THEME_OPTIONS,
   THEME_STORAGE_KEY,
+  clearThemeCookie,
   parseStoredTheme,
   readThemeCookie,
   resolveTheme,
@@ -46,6 +47,7 @@ describe("persistance", () => {
     expect(parseStoredTheme("dark")).toBe("dark");
     expect(parseStoredTheme("light")).toBe("light");
     expect(parseStoredTheme("system")).toBeNull();
+    expect(parseStoredTheme(null)).toBeNull();
     expect(readThemeCookie(`a=1; ${THEME_STORAGE_KEY}=dark`)).toBe("dark");
     expect(readThemeCookie(`${THEME_STORAGE_KEY}=light; session=abc`)).toBe("light");
     expect(readThemeCookie("fleetcare-theme=bleu")).toBeNull();
@@ -56,6 +58,12 @@ describe("persistance", () => {
       `${THEME_STORAGE_KEY}=dark; Path=/; Max-Age=31536000; SameSite=Lax`,
     );
     expect(themeCookie("light", true)).toContain("Secure");
+  });
+
+  it("efface le cookie pour revenir au système", () => {
+    expect(clearThemeCookie()).toBe(`${THEME_STORAGE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`);
+    expect(clearThemeCookie(true)).toContain("Secure");
+    expect(readThemeCookie(`${THEME_STORAGE_KEY}=`)).toBeNull();
   });
 });
 
@@ -74,10 +82,22 @@ describe("script d’initialisation", () => {
     expect(runInitScript({ local: null, cookie: "fleetcare-theme=dark", prefersDark: false }).dark).toBe(true);
     expect(runInitScript({ local: null, cookie: "", prefersDark: false }).dark).toBe(false);
   });
+
+  it("suit le système avant le rendu quand l’override a été effacé", () => {
+    expect(runInitScript({ local: null, cookie: "", prefersDark: true })).toMatchObject({
+      dark: true,
+      style: { colorScheme: "dark" },
+    });
+    expect(runInitScript({ local: null, cookie: `${THEME_STORAGE_KEY}=`, prefersDark: false }).dark).toBe(false);
+    expect(runInitScript({ local: "system", cookie: `${THEME_STORAGE_KEY}=dark`, prefersDark: false }).dark).toBe(
+      false,
+    );
+  });
 });
 
 describe("libellés", () => {
   it("propose Clair puis Sombre", () => {
-    expect(THEME_OPTIONS.map((option) => option.label)).toEqual(["Clair", "Sombre"]);
+    expect(THEME_OPTIONS.map((option) => option.label)).toEqual(["Clair", "Sombre", "Système"]);
+    expect(THEME_OPTIONS.map((option) => option.value)).toEqual(["light", "dark", "system"]);
   });
 });

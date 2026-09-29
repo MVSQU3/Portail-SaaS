@@ -3,24 +3,28 @@
 import { createContext, useContext, useLayoutEffect, useState } from "react";
 import {
   THEME_STORAGE_KEY,
+  clearThemeCookie,
   parseStoredTheme,
   readThemeCookie,
   resolveTheme,
   themeCookie,
   type ThemeChoice,
+  type ThemePreference,
 } from "@/lib/theme";
 
 type ThemeContextValue = {
-  theme: ThemeChoice;
-  setTheme: (theme: ThemeChoice) => void;
+  preference: ThemePreference;
+  setTheme: (preference: ThemePreference) => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readClientTheme(): ThemeChoice | null {
   try {
-    const stored = parseStoredTheme(localStorage.getItem(THEME_STORAGE_KEY));
-    if (stored) return stored;
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "system") return null;
+    const parsed = parseStoredTheme(stored);
+    if (parsed) return parsed;
   } catch {
     /* private mode */
   }
@@ -42,6 +46,16 @@ function persistTheme(theme: ThemeChoice) {
   applyThemeClass(theme);
 }
 
+function clearStoredTheme() {
+  try {
+    localStorage.removeItem(THEME_STORAGE_KEY);
+  } catch {
+    /* private mode */
+  }
+  document.cookie = clearThemeCookie(false);
+  document.cookie = clearThemeCookie(true);
+}
+
 export function ThemeProvider({
   initialTheme,
   children,
@@ -49,31 +63,36 @@ export function ThemeProvider({
   initialTheme: ThemeChoice | null;
   children: React.ReactNode;
 }) {
-  const [theme, setThemeState] = useState<ThemeChoice>(initialTheme ?? "light");
+  const [preference, setPreference] = useState<ThemePreference>(initialTheme ?? "system");
 
   useLayoutEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const applyFromSystem = () => {
+    const applyFromStorage = () => {
       const stored = readClientTheme();
-      const resolved = resolveTheme(stored, media.matches);
-      applyThemeClass(resolved);
-      setThemeState(resolved);
+      applyThemeClass(resolveTheme(stored, media.matches));
+      setPreference(stored ?? "system");
     };
-    applyFromSystem();
+    applyFromStorage();
     const onChange = () => {
       if (readClientTheme()) return;
-      applyFromSystem();
+      applyThemeClass(resolveTheme(null, media.matches));
+      setPreference("system");
     };
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);
   }, []);
 
-  const setTheme = (next: ThemeChoice) => {
-    persistTheme(next);
-    setThemeState(next);
+  const setTheme = (next: ThemePreference) => {
+    if (next === "system") {
+      clearStoredTheme();
+      applyThemeClass(resolveTheme(null, window.matchMedia("(prefers-color-scheme: dark)").matches));
+    } else {
+      persistTheme(next);
+    }
+    setPreference(next);
   };
 
-  return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ preference, setTheme }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {
