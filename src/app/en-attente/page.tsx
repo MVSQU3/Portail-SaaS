@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { signOutAction } from "@/actions/auth";
 import { auth } from "@/auth";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getPrisma } from "@/lib/prisma";
 import { canEnterGestionnaireShell } from "@/lib/tenant";
 
@@ -37,6 +38,9 @@ export default async function PendingPage() {
             Déconnexion
           </button>
         </form>
+        <div className="mt-6">
+          <ThemeToggle />
+        </div>
       </section>
     </main>
   );

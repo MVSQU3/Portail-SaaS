@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AuthFrame({
   title,
@@ -27,6 +28,7 @@ export function AuthFrame({
             {alternate.label}
           </Link>
         </p>
+        <ThemeToggle />
       </div>
     </main>
   );

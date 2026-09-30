@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { signOutAction } from "@/actions/auth";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { isActivePath, type NavItem } from "@/lib/navigation";
 
 export function AppShell({
@@ -87,6 +88,9 @@ export function AppShell({
             )}
           </ul>
         </nav>
+        <div className="mt-auto border-t border-slate-200 px-3 py-3">
+          <ThemeToggle />
+        </div>
       </aside>
       <div className="min-w-0 px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto grid w-full max-w-6xl gap-6">{children}</div>
